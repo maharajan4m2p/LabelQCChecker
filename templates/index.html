@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Label QC Checker</title>
+</head>
+<body>
+
+<h1>Label QC Checker</h1>
+
+<form
+action="/compare"
+method="POST"
+enctype="multipart/form-data">
+
+    <p>Approval Label</p>
+
+    <input
+    type="file"
+    name="approval"
+    required>
+
+    <br><br>
+
+    <p>Sample Labels</p>
+
+    <input
+    type="file"
+    name="sample"
+    multiple
+    required>
+
+    <br><br>
+
+    <button type="submit">
+        Compare Labels
+    </button>
+
+</form>
+
+</body>
+</html>

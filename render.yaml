@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: labelqcchecker
+    env: docker
+    plan: free
+    dockerfilePath: Dockerfile
+    envVars:
+      - key: FLASK_ENV
+        value: production
+      - key: TESSERACT_CMD
+        value: /usr/bin/tesseract
+    healthCheckPath: /
+    autoDeploy: true

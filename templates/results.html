@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Results</title>
+</head>
+<body>
+
+<h1>Label QC Report</h1>
+
+<h2>Approval file: {{ comparison.approval_filename }}</h2>
+
+{% for sample in comparison.samples %}
+    <section style="margin-bottom: 2rem; padding: 1rem; border: 1px solid #ccc;">
+        <h3>Sample: {{ sample.filename }}</h3>
+        <p>Status: {{ sample.status }}</p>
+        <p>Accuracy: {{ sample.score }}%</p>
+        <p>Matched Fields: {{ sample.matched }} / {{ sample.total_fields }}</p>
+
+        <h4>Missing Fields</h4>
+        <ul>
+        {% if sample.missing_fields %}
+            {% for item in sample.missing_fields %}
+            <li>{{ item }}</li>
+            {% endfor %}
+        {% else %}
+            <li>None</li>
+        {% endif %}
+        </ul>
+
+        <h4>Extra Fields</h4>
+        <ul>
+        {% if sample.extra_fields %}
+            {% for item in sample.extra_fields %}
+            <li>{{ item }}</li>
+            {% endfor %}
+        {% else %}
+            <li>None</li>
+        {% endif %}
+        </ul>
+
+        <table border="1" style="width:100%; border-collapse: collapse;">
+        <tr>
+            <th>Field</th>
+            <th>Approval</th>
+            <th>Sample</th>
+            <th>Status</th>
+        </tr>
+        {% for row in sample.results %}
+        <tr>
+            <td>{{ row.field }}</td>
+            <td>{{ row.approval }}</td>
+            <td>{{ row.sample }}</td>
+            <td>{{ row.status }}</td>
+        </tr>
+        {% endfor %}
+        </table>
+    </section>
+{% endfor %}
+
+<br>
+<a href="/">Back</a>
+
+</body>
+</html>
