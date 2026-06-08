@@ -39,70 +39,90 @@ def index():
 @app.route("/compare", methods=["POST"])
 def compare():
 
-    approval = request.files.get("approval")
-    samples = request.files.getlist("sample")
+    try:
 
-    if not approval or approval.filename == "":
-        return "Approval file missing", 400
+        approval = request.files.get("approval")
+        samples = request.files.getlist("sample")
 
-    if not samples or len(samples) == 0 or all(s.filename == "" for s in samples):
-        return "Sample file missing", 400
+        if not approval or approval.filename == "":
+            return "Approval file missing", 400
 
-    if not allowed_file(approval.filename):
-        return "Unsupported approval file type", 400
+        if (
+            not samples
+            or len(samples) == 0
+            or all(s.filename == "" for s in samples)
+        ):
+            return "Sample file missing", 400
 
-    approval_filename = (
-        str(uuid.uuid4())
-        + "_"
-        + secure_filename(approval.filename)
-    )
+        if not allowed_file(approval.filename):
+            return "Unsupported approval file type", 400
 
-    approval_path = os.path.join(
-        app.config["UPLOAD_FOLDER"],
-        approval_filename
-    )
-    approval.save(approval_path)
-
-    sample_results = []
-
-    for sample in samples:
-        if not sample or sample.filename == "":
-            continue
-        if not allowed_file(sample.filename):
-            continue
-
-        sample_filename = (
+        approval_filename = (
             str(uuid.uuid4())
             + "_"
-            + secure_filename(sample.filename)
+            + secure_filename(approval.filename)
         )
 
-        sample_path = os.path.join(
+        approval_path = os.path.join(
             app.config["UPLOAD_FOLDER"],
-            sample_filename
+            approval_filename
         )
 
-        sample.save(sample_path)
+        approval.save(approval_path)
 
-        result = compare_label_images(
-            approval_path,
-            sample_path
+        sample_results = []
+
+        for sample in samples:
+
+            if not sample:
+                continue
+
+            if sample.filename == "":
+                continue
+
+            if not allowed_file(sample.filename):
+                continue
+
+            sample_filename = (
+                str(uuid.uuid4())
+                + "_"
+                + secure_filename(sample.filename)
+            )
+
+            sample_path = os.path.join(
+                app.config["UPLOAD_FOLDER"],
+                sample_filename
+            )
+
+            sample.save(sample_path)
+
+            result = compare_label_images(
+                approval_path,
+                sample_path
+            )
+
+            result["filename"] = sample.filename
+
+            sample_results.append(result)
+
+        if len(sample_results) == 0:
+            return "No valid sample files uploaded", 400
+
+        comparison = {
+            "approval_filename": approval.filename,
+            "samples": sample_results
+        }
+
+        return render_template(
+            "results.html",
+            comparison=comparison
         )
-        result["filename"] = sample.filename
-        sample_results.append(result)
 
-    if not sample_results:
-        return "No valid sample files provided.", 400
+    except Exception as e:
 
-    comparison = {
-        "approval_filename": approval.filename,
-        "samples": sample_results
-    }
+        print("ERROR:", str(e))
 
-    return render_template(
-        "results.html",
-        comparison=comparison
-    )
+        return f"Internal Error: {str(e)}", 500
 
 
 if __name__ == "__main__":
