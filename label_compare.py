@@ -8,7 +8,7 @@ from PIL import Image
 from difflib import SequenceMatcher
 from io import BytesIO
 
-# Windows local only
+# ── Windows local only ─────────────────────────────────
 if os.name == "nt":
     try:
         import pytesseract
@@ -26,7 +26,23 @@ else:
 def ocr_space_api(image):
     try:
         buffered = BytesIO()
-        image.save(buffered, format="PNG")
+
+        # Resize to max 800px
+        max_size = 800
+        if image.width > max_size or image.height > max_size:
+            image.thumbnail(
+                (max_size, max_size),
+                Image.LANCZOS
+            )
+
+        # Save as JPEG with compression
+        image = image.convert("RGB")
+        image.save(buffered, format="JPEG", quality=85)
+
+        # Check size
+        size_kb = len(buffered.getvalue()) / 1024
+        print(f"[OCR] Image size: {size_kb:.1f} KB")
+
         img_base64 = base64.b64encode(
             buffered.getvalue()
         ).decode("utf-8")
@@ -36,14 +52,15 @@ def ocr_space_api(image):
             try:
                 payload = urllib.parse.urlencode({
                     "base64Image": (
-                        f"data:image/png;base64,{img_base64}"
+                        f"data:image/jpeg;base64,{img_base64}"
                     ),
                     "apikey": "K86258847888957",
                     "language": "eng",
                     "isOverlayRequired": False,
                     "OCREngine": engine,
                     "scale": True,
-                    "isTable": False
+                    "isTable": False,
+                    "detectOrientation": True
                 }).encode("utf-8")
 
                 req = urllib.request.Request(
@@ -92,7 +109,7 @@ def extract_text(image_path):
 
         image = Image.open(image_path)
 
-        # Resize large images to save memory
+        # Resize large images
         max_size = 1000
         if image.width > max_size or image.height > max_size:
             image.thumbnail(
