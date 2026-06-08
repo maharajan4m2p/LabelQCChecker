@@ -3,213 +3,115 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>QC Results</title>
+    <title>Label QC Checker</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
             font-family: 'Segoe UI', sans-serif;
             background: #f0f2f5;
-            padding: 30px 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
         }
-        .container { max-width: 900px; margin: 0 auto; }
-        h1 { font-size: 26px; color: #1a1a2e; margin-bottom: 6px; }
-        .subtitle { color: #666; font-size: 14px; margin-bottom: 30px; }
-        .back-btn {
-            display: inline-block;
-            margin-bottom: 24px;
-            padding: 10px 20px;
-            background: #4a90e2;
-            color: white;
-            text-decoration: none;
-            border-radius: 8px;
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 40px;
+            width: 100%;
+            max-width: 520px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+        h1 { font-size: 24px; color: #1a1a2e; margin-bottom: 8px; }
+        p.subtitle { color: #666; font-size: 14px; margin-bottom: 30px; }
+        .form-group { margin-bottom: 20px; }
+        label {
+            display: block;
             font-size: 14px;
             font-weight: 600;
-        }
-        .back-btn:hover { background: #357abd; }
-        .error-box {
-            background: #fff0f0;
-            border: 1px solid #ffcccc;
-            border-radius: 10px;
-            padding: 20px;
-            color: #cc0000;
-            font-size: 15px;
-            margin-bottom: 20px;
-        }
-        .summary-card {
-            background: white;
-            border-radius: 12px;
-            padding: 24px;
-            margin-bottom: 24px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
-        }
-        .summary-card h2 { font-size: 16px; color: #444; margin-bottom: 8px; }
-        .meta { font-size: 13px; color: #888; }
-        .accuracy-badge {
-            display: inline-block;
-            padding: 6px 16px;
-            border-radius: 20px;
-            font-size: 22px;
-            font-weight: 700;
-            margin-bottom: 10px;
-        }
-        .high   { background: #e6f9ee; color: #1a7a40; }
-        .medium { background: #fff8e1; color: #b07d00; }
-        .low    { background: #fff0f0; color: #cc0000; }
-        .sample-block {
-            background: white;
-            border-radius: 12px;
-            padding: 24px;
-            margin-bottom: 24px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
-        }
-        .sample-block h3 {
-            font-size: 16px;
             color: #333;
-            margin-bottom: 16px;
-            padding-bottom: 10px;
-            border-bottom: 1px solid #eee;
+            margin-bottom: 6px;
         }
-        table { width: 100%; border-collapse: collapse; font-size: 14px; }
-        th {
-            background: #f5f7fa;
-            text-align: left;
-            padding: 10px 14px;
-            font-size: 12px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            color: #666;
-        }
-        td {
-            padding: 10px 14px;
-            border-bottom: 1px solid #f0f0f0;
-            color: #333;
-        }
-        tr:last-child td { border-bottom: none; }
-        .badge {
-            display: inline-block;
-            padding: 3px 10px;
-            border-radius: 12px;
-            font-size: 12px;
-            font-weight: 600;
-        }
-        .badge-match    { background: #e6f9ee; color: #1a7a40; }
-        .badge-mismatch { background: #fff0f0; color: #cc0000; }
-        .warnings {
-            margin-top: 14px;
-            font-size: 13px;
-            color: #b07d00;
-            background: #fffbe6;
+        input[type="file"] {
+            width: 100%;
+            padding: 10px;
+            border: 2px dashed #ccc;
             border-radius: 8px;
-            padding: 10px 14px;
+            font-size: 14px;
+            cursor: pointer;
+            background: #fafafa;
+            transition: border-color 0.2s;
         }
-        .warnings ul { margin-left: 18px; margin-top: 4px; }
+        input[type="file"]:hover { border-color: #4a90e2; }
+        .hint { font-size: 12px; color: #999; margin-top: 4px; }
+        button {
+            width: 100%;
+            padding: 14px;
+            background: #4a90e2;
+            color: white;
+            font-size: 16px;
+            font-weight: 600;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.2s;
+            margin-top: 10px;
+        }
+        button:hover { background: #357abd; }
+        button:disabled { background: #aaa; cursor: not-allowed; }
+        .loading {
+            display: none;
+            text-align: center;
+            margin-top: 16px;
+            color: #666;
+            font-size: 14px;
+        }
     </style>
 </head>
 <body>
-<div class="container">
-
-    <h1>🏷️ QC Comparison Results</h1>
-    <p class="subtitle">Label comparison report</p>
-
-    <a href="/" class="back-btn">← New Comparison</a>
-
-    {% if error %}
-    <div class="error-box">
-        ⚠️ {{ error }}
-    </div>
-
-    {% elif comparison and comparison.samples %}
-
-    <div class="summary-card">
-        <h2>📋 Approval: {{ comparison.approval_filename }}</h2>
-        <p class="meta">{{ comparison.samples | length }} sample(s) compared</p>
-    </div>
-
-    {% for sample in comparison.samples %}
-
-    {% set acc = sample.accuracy %}
-    {% if acc >= 80 %}
-        {% set badge_class = "high" %}
-    {% elif acc >= 50 %}
-        {% set badge_class = "medium" %}
-    {% else %}
-        {% set badge_class = "low" %}
-    {% endif %}
-
-    <div class="sample-block">
-        <h3>
-            📄 {{ sample.filename }}
-            &nbsp;
-            <span class="accuracy-badge {{ badge_class }}">
-                {{ acc }}% Match
-            </span>
-        </h3>
-
-        {% if sample.results %}
-        <table>
-            <thead>
-                <tr>
-                    <th>Field</th>
-                    <th>Approval</th>
-                    <th>Sample</th>
-                    <th>Similarity</th>
-                    <th>Status</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for row in sample.results %}
-                <tr>
-                    <td><strong>{{ row.field }}</strong></td>
-                    <td>{{ row.approval }}</td>
-                    <td>{{ row.sample }}</td>
-                    <td>{{ row.similarity }}%</td>
-                    <td>
-                        {% if row.status == "MATCH" %}
-                        <span class="badge badge-match">✓ MATCH</span>
-                        {% else %}
-                        <span class="badge badge-mismatch">✗ MISMATCH</span>
-                        {% endif %}
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-        {% else %}
-        <p style="color:#999; padding:10px;">
-            No fields detected. Please check image quality.
+    <div class="card">
+        <h1>🏷️ Label QC Checker</h1>
+        <p class="subtitle">
+            Compare sample labels against approved label using OCR
         </p>
-        {% endif %}
 
-        {% if sample.missing_fields or sample.extra_fields %}
-        <div class="warnings">
-            {% if sample.missing_fields %}
-            ⚠️ Missing in sample:
-            <ul>
-                {% for f in sample.missing_fields %}
-                <li>{{ f }}</li>
-                {% endfor %}
-            </ul>
-            {% endif %}
-            {% if sample.extra_fields %}
-            ℹ️ Extra in sample:
-            <ul>
-                {% for f in sample.extra_fields %}
-                <li>{{ f }}</li>
-                {% endfor %}
-            </ul>
-            {% endif %}
-        </div>
-        {% endif %}
+        <form action="/compare" method="POST"
+              enctype="multipart/form-data"
+              onsubmit="handleSubmit()">
 
+            <div class="form-group">
+                <label>📋 Approval Label</label>
+                <input type="file" name="approval"
+                       accept=".png,.jpg,.jpeg,.bmp,.tif,.tiff"
+                       required>
+                <p class="hint">Upload the approved master label image</p>
+            </div>
+
+            <div class="form-group">
+                <label>🔍 Sample Label(s)</label>
+                <input type="file" name="sample"
+                       accept=".png,.jpg,.jpeg,.bmp,.tif,.tiff"
+                       multiple required>
+                <p class="hint">Upload one or more sample labels to compare</p>
+            </div>
+
+            <button type="submit" id="submitBtn">
+                ▶ Run Comparison
+            </button>
+
+            <div class="loading" id="loadingMsg">
+                ⏳ Analyzing labels, please wait...
+            </div>
+        </form>
     </div>
-    {% endfor %}
 
-    {% else %}
-    <div class="error-box">
-        No results found. Please go back and try again.
-    </div>
-    {% endif %}
-
-</div>
+    <script>
+        function handleSubmit() {
+            document.getElementById("submitBtn").disabled = true;
+            document.getElementById("submitBtn").textContent = "Processing...";
+            document.getElementById("loadingMsg").style.display = "block";
+        }
+    </script>
 </body>
 </html>
