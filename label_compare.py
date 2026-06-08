@@ -38,7 +38,7 @@ def ocr_space_api(image):
                     "base64Image": (
                         f"data:image/png;base64,{img_base64}"
                     ),
-                    "apikey": "helloworld",
+                    "apikey": "K86258847888957",
                     "language": "eng",
                     "isOverlayRequired": False,
                     "OCREngine": engine,
