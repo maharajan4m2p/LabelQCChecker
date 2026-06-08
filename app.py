@@ -1,15 +1,16 @@
 import os
 import uuid
+import traceback
+
 from flask import Flask, render_template, request
 from werkzeug.utils import secure_filename
+
 from label_compare import compare_label_images
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 UPLOAD_FOLDER = os.path.join(BASE_DIR, "uploads")
 
-ALLOWED_EXTENSIONS = {
-    "png", "jpg", "jpeg", "bmp", "tif", "tiff"
-}
+ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "bmp", "tif", "tiff"}
 
 app = Flask(__name__)
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
@@ -20,8 +21,7 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 def allowed_file(filename):
     return (
         "." in filename and
-        filename.rsplit(".", 1)[1].lower()
-        in ALLOWED_EXTENSIONS
+        filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
     )
 
 
@@ -30,118 +30,92 @@ def index():
     return render_template("index.html")
 
 
-@app.route("/test")
-def test():
-    return "Flask is working"
-
-
 @app.route("/compare", methods=["POST"])
 def compare():
-
-    approval_path = None
-    sample_path = None
-
     try:
+        approval = request.files.get("approval")
+        samples = request.files.getlist("sample")
 
-        if "approval" not in request.files:
+        if not approval or approval.filename == "":
             return render_template(
                 "results.html",
-                error="Approval image missing"
-            )
+                error="Approval file missing.",
+                comparison=None
+            ), 400
 
-        if "sample" not in request.files:
+        if not samples or all(s.filename == "" for s in samples):
             return render_template(
                 "results.html",
-                error="Sample image missing"
-            )
+                error="At least one sample file is required.",
+                comparison=None
+            ), 400
 
-        approval_file = request.files["approval"]
-        sample_file = request.files["sample"]
-
-        if approval_file.filename == "":
+        if not allowed_file(approval.filename):
             return render_template(
                 "results.html",
-                error="Select approval image"
-            )
-
-        if sample_file.filename == "":
-            return render_template(
-                "results.html",
-                error="Select sample image"
-            )
-
-        if not allowed_file(approval_file.filename):
-            return render_template(
-                "results.html",
-                error="Invalid approval image format"
-            )
-
-        if not allowed_file(sample_file.filename):
-            return render_template(
-                "results.html",
-                error="Invalid sample image format"
-            )
+                error="Unsupported approval file type.",
+                comparison=None
+            ), 400
 
         approval_filename = (
-            str(uuid.uuid4())
-            + "_"
-            + secure_filename(approval_file.filename)
+            str(uuid.uuid4()) + "_" + secure_filename(approval.filename)
         )
-
-        sample_filename = (
-            str(uuid.uuid4())
-            + "_"
-            + secure_filename(sample_file.filename)
-        )
-
         approval_path = os.path.join(
-            UPLOAD_FOLDER,
-            approval_filename
+            app.config["UPLOAD_FOLDER"], approval_filename
         )
+        approval.save(approval_path)
+        print(f"Approval saved: {approval_path}")
 
-        sample_path = os.path.join(
-            UPLOAD_FOLDER,
-            sample_filename
-        )
+        sample_results = []
 
-        approval_file.save(approval_path)
-        sample_file.save(sample_path)
+        for sample in samples:
+            if not sample:
+                continue
+            if sample.filename == "":
+                continue
+            if not allowed_file(sample.filename):
+                continue
 
-        results = compare_label_images(
-            approval_path,
-            sample_path
-        )
+            sample_filename = (
+                str(uuid.uuid4()) + "_" + secure_filename(sample.filename)
+            )
+            sample_path = os.path.join(
+                app.config["UPLOAD_FOLDER"], sample_filename
+            )
+            sample.save(sample_path)
+            print(f"Sample saved: {sample_path}")
+
+            result = compare_label_images(approval_path, sample_path)
+            result["filename"] = sample.filename
+            sample_results.append(result)
+
+        if not sample_results:
+            return render_template(
+                "results.html",
+                error="No valid sample files were uploaded.",
+                comparison=None
+            ), 400
+
+        comparison = {
+            "approval_filename": approval.filename,
+            "samples": sample_results
+        }
 
         return render_template(
             "results.html",
-            results=results,
+            comparison=comparison,
             error=None
-        )
+        ), 200
 
     except Exception as e:
-
-        import traceback
         traceback.print_exc()
-
-        return (
-            f"<h2>Server Error</h2>"
-            f"<pre>{str(e)}</pre>",
-            500
-        )
-
-    finally:
-
-        for path in [approval_path, sample_path]:
-            try:
-                if path and os.path.exists(path):
-                    os.remove(path)
-            except:
-                pass
+        return render_template(
+            "results.html",
+            error=f"Server error: {str(e)}",
+            comparison=None
+        ), 500
 
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
-    app.run(
-        host="0.0.0.0",
-        port=port
-    )
+    app.run(host="0.0.0.0", port=port, debug=False)
