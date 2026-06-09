@@ -35,7 +35,12 @@ if os.name == "nt":
 # --------------------------------------------------
 
 OCR_API_KEY = "K86258847888957"
-reader = None
+import easyocr
+
+reader = easyocr.Reader(
+    ['en'],
+    gpu=False
+)
 
 
 def ocr_space_api(image):
@@ -329,15 +334,28 @@ def compare_fields(
     total = len(approval_keys) if approval_keys else len(results)
     accuracy = round((match_count / total) * 100, 2) if total > 0 else 0
 
-    return {
-        "accuracy": accuracy,
-        "match_count": match_count,
-        "total_fields": total,
-        "results": results,
-        "missing_fields": missing_fields,
-        "extra_fields": extra_fields,
-        "mismatch_fields": mismatch_fields
-    }
+matched_data = [
+    row["field"]
+    for row in results
+    if row["status"] == "MATCH"
+]
+
+return {
+    "status": "PASS" if accuracy >= 90 else "FAIL",
+
+    "match_percentage": accuracy,
+    "total_found": match_count,
+
+    "matched_data": matched_data,
+    "missing_data": missing_fields,
+    "extra_data": extra_fields,
+
+    "accuracy": accuracy,
+    "match_count": match_count,
+    "total_fields": total,
+    "results": results,
+    "mismatch_fields": mismatch_fields
+}
 
 
 # --------------------------------------------------
@@ -359,16 +377,23 @@ def compare_label_images(
 
     if not approval_text and not sample_text:
 
-        return {
-            "accuracy": 0,
-            "match_count": 0,
-            "total_fields": 0,
-            "results": [],
-            "missing_fields": [],
-            "extra_fields": [],
-            "approval_text": "",
-            "sample_text": ""
-        }
+return {
+    "status": "FAIL",
+    "match_percentage": 0,
+    "total_found": 0,
+
+    "matched_data": [],
+    "missing_data": [],
+    "extra_data": [],
+
+    "accuracy": 0,
+    "match_count": 0,
+    "total_fields": 0,
+    "results": [],
+
+    "approval_text": [],
+    "sample_text": []
+}
 
     approval_fields = parse_fields(
         approval_text
@@ -391,8 +416,8 @@ def compare_label_images(
             sample_fields
         )
 
-        result["approval_text"] = approval_text
-        result["sample_text"] = sample_text
+result["approval_text"] = approval_text.splitlines()
+result["sample_text"] = sample_text.splitlines()
 
         return result
 
@@ -407,10 +432,37 @@ def compare_label_images(
         2
     )
 
-    return {
-        "accuracy": accuracy,
-        "match_count": 1,
-        "total_fields": 1,
+return {
+    "status": "PASS" if accuracy >= 90 else "FAIL",
+
+    "match_percentage": accuracy,
+    "total_found": 1,
+
+    "matched_data": ["FULL LABEL TEXT"]
+    if accuracy >= 90 else [],
+
+    "missing_data": [],
+    "extra_data": [],
+
+    "accuracy": accuracy,
+    "match_count": 1,
+    "total_fields": 1,
+
+    "results": [
+        {
+            "field": "FULL LABEL TEXT",
+            "approval": approval_text[:500],
+            "sample": sample_text[:500],
+            "similarity": accuracy,
+            "status": "MATCH"
+            if accuracy >= 90
+            else "MISMATCH"
+        }
+    ],
+
+    "approval_text": approval_text.splitlines(),
+    "sample_text": sample_text.splitlines()
+}
         "results": [
             {
                 "field": "FULL LABEL TEXT",
