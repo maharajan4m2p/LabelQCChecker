@@ -4,7 +4,6 @@ import json
 import base64
 import urllib.request
 import urllib.parse
-import easyocr
 
 from io import BytesIO
 from PIL import Image
@@ -36,7 +35,7 @@ if os.name == "nt":
 # --------------------------------------------------
 
 OCR_API_KEY = "K86258847888957"
-reader = easyocr.Reader(['en'], gpu=False)
+reader = None
 
 
 def ocr_space_api(image):
