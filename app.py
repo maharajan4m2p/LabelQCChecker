@@ -1,165 +1,162 @@
-<<<<<<< HEAD
-import easyocr
-import re
-
-# Initialize OCR reader once
-reader = easyocr.Reader(['en'], gpu=False)
-
-
-def extract_text(image_path):
-    """
-    Extract text from image using EasyOCR.
-    """
-    try:
-        results = reader.readtext(image_path)
-
-        text_lines = []
-
-        for result in results:
-            text = result[1].strip()
-
-            if text:
-                text_lines.append(text)
-
-        return text_lines
-
-    except Exception as e:
-        print(f"OCR Error: {e}")
-        return []
-
-
-def clean_text(lines):
-    """
-    Clean OCR output.
-    """
-    cleaned = []
-
-    for line in lines:
-
-        line = line.strip()
-
-        line = re.sub(r'\s+', ' ', line)
-
-        if line:
-            cleaned.append(line)
-
-    return cleaned
-
-
-def compare_label_images(approval_image, sample_image):
-    """
-    Compare approval label with sample label.
-    """
-
-    approval_text = extract_text(approval_image)
-    sample_text = extract_text(sample_image)
-
-    approval_text = clean_text(approval_text)
-    sample_text = clean_text(sample_text)
-
-    approval_set = set(
-        item.lower().strip()
-        for item in approval_text
-    )
-
-    sample_set = set(
-        item.lower().strip()
-        for item in sample_text
-    )
-
-    missing_data = sorted(
-        list(approval_set - sample_set)
-    )
-
-    extra_data = sorted(
-        list(sample_set - approval_set)
-    )
-
-    matched_data = sorted(
-        list(approval_set & sample_set)
-    )
-
-    total_required = len(approval_set)
-
-    total_found = len(matched_data)
-
-    match_percentage = 0
-
-    if total_required > 0:
-        match_percentage = round(
-            (total_found / total_required) * 100,
-            2
-        )
-
-    status = "PASS"
-
-    if missing_data:
-        status = "FAIL"
-
-    return {
-        "status": status,
-        "approval_text": approval_text,
-        "sample_text": sample_text,
-        "missing_data": missing_data,
-        "extra_data": extra_data,
-        "matched_data": matched_data,
-        "match_percentage": match_percentage,
-        "total_required": total_required,
-        "total_found": total_found
-    }
-=======
 import os
+import uuid
+import traceback
 
-from flask import Flask, flash, redirect, render_template, request, url_for
+from flask import Flask, render_template, request
 from werkzeug.utils import secure_filename
 
-from label_compare import ALLOWED_EXTENSIONS, allowed_file, compare_label_files
+from label_compare import compare_label_images
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+UPLOAD_FOLDER = os.path.join(BASE_DIR, "uploads")
+
+ALLOWED_EXTENSIONS = {
+    "png",
+    "jpg",
+    "jpeg",
+    "bmp",
+    "tif",
+    "tiff"
+}
 
 app = Flask(__name__)
-app.config["UPLOAD_FOLDER"] = os.path.join(os.path.dirname(__file__), "uploads")
-app.config["MAX_CONTENT_LENGTH"] = 16 * 1024 * 1024
-app.secret_key = "label-qc-checker-secret"
+app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 
-os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 
-@app.route("/", methods=["GET"])
+def allowed_file(filename):
+    return (
+        "." in filename and
+        filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
+    )
+
+
+@app.route("/")
 def index():
     return render_template("index.html")
 
 
 @app.route("/compare", methods=["POST"])
 def compare():
-    uploaded_files = request.files.getlist("files")
 
-    if len(uploaded_files) != 2:
-        flash("Please upload exactly two label files.")
-        return redirect(url_for("index"))
+    try:
 
-    saved_paths = []
-    for uploaded_file in uploaded_files:
-        if uploaded_file.filename == "":
-            flash("One of the files is missing.")
-            return redirect(url_for("index"))
+        approval = request.files.get("approval")
+        samples = request.files.getlist("sample")
 
-        if not allowed_file(uploaded_file.filename):
-            flash("Only CSV and Excel files are supported.")
-            return redirect(url_for("index"))
+        if not approval or approval.filename == "":
+            return render_template(
+                "results.html",
+                error="Approval label image is required.",
+                comparison=None
+            )
 
-        filename = secure_filename(uploaded_file.filename)
-        destination = os.path.join(app.config["UPLOAD_FOLDER"], filename)
-        uploaded_file.save(destination)
-        saved_paths.append(destination)
+        if not samples or all(
+            s.filename == ""
+            for s in samples
+        ):
+            return render_template(
+                "results.html",
+                error="At least one sample image is required.",
+                comparison=None
+            )
 
-    summary = compare_label_files(saved_paths[0], saved_paths[1])
+        if not allowed_file(approval.filename):
+            return render_template(
+                "results.html",
+                error="Invalid approval image format.",
+                comparison=None
+            )
 
-    return render_template(
-        "results.html",
-        summary=summary,
-        file_names=[os.path.basename(path) for path in saved_paths],
-    )
+        approval_filename = (
+            str(uuid.uuid4())
+            + "_"
+            + secure_filename(approval.filename)
+        )
+
+        approval_path = os.path.join(
+            app.config["UPLOAD_FOLDER"],
+            approval_filename
+        )
+
+        approval.save(approval_path)
+
+        sample_results = []
+
+        for sample in samples:
+
+            if (
+                not sample
+                or sample.filename == ""
+            ):
+                continue
+
+            if not allowed_file(sample.filename):
+                continue
+
+            sample_filename = (
+                str(uuid.uuid4())
+                + "_"
+                + secure_filename(sample.filename)
+            )
+
+            sample_path = os.path.join(
+                app.config["UPLOAD_FOLDER"],
+                sample_filename
+            )
+
+            sample.save(sample_path)
+
+            result = compare_label_images(
+                approval_path,
+                sample_path
+            )
+
+            result["filename"] = sample.filename
+
+            sample_results.append(result)
+
+        comparison = {
+            "approval_filename":
+                approval.filename,
+            "samples":
+                sample_results
+        }
+
+        return render_template(
+            "results.html",
+            comparison=comparison,
+            error=None
+        )
+
+    except Exception as e:
+
+        traceback.print_exc()
+
+        return render_template(
+            "results.html",
+            error=f"Server Error: {str(e)}",
+            comparison=None
+        )
+
+
+@app.route("/health")
+def health():
+    return "OK", 200
 
 
 if __name__ == "__main__":
-    app.run(debug=True, host="0.0.0.0", port=5000)
->>>>>>> 018d8f107f87750f6fb7eec948efb60c62d2e72e
+
+    port = int(
+        os.environ.get(
+            "PORT",
+            10000
+        )
+    )
+
+    app.run(
+        host="0.0.0.0",
+        port=port,
+        debug=False
+    )
