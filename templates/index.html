@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Label QC Checker</title>
+    <style>
+      body { font-family: Arial, sans-serif; margin: 2rem; color: #223; }
+      .card { max-width: 720px; margin: 0 auto; padding: 1.5rem; border: 1px solid #d9dfe8; border-radius: 12px; background: #fff; box-shadow: 0 8px 18px rgba(0,0,0,0.05); }
+      input[type="file"] { display: block; margin-top: 0.5rem; }
+      button { margin-top: 1rem; padding: 0.6rem 1rem; border-radius: 8px; border: none; background: #0b5fff; color: #fff; cursor: pointer; }
+      .flash { color: #b42318; background: #fff4f2; border: 1px solid #f5b7b1; padding: 0.75rem; border-radius: 8px; margin-bottom: 1rem; }
+      code { background: #f3f6fb; padding: 0.1rem 0.35rem; border-radius: 4px; }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <h1>Label QC Checker</h1>
+      <p>Upload two CSV or Excel label files to compare their labels row by row.</p>
+      {% with messages = get_flashed_messages() %}
+        {% if messages %}
+          {% for message in messages %}
+            <div class="flash">{{ message }}</div>
+          {% endfor %}
+        {% endif %}
+      {% endwith %}
+      <form action="/compare" method="post" enctype="multipart/form-data">
+        <label for="file-a">File A</label>
+        <input id="file-a" type="file" name="files" required />
+
+        <label for="file-b" style="margin-top: 1rem; display: block;">File B</label>
+        <input id="file-b" type="file" name="files" required />
+
+        <button type="submit">Compare labels</button>
+      </form>
+      <p style="font-size: 0.95rem; color: #556;">Tip: the app looks for <code>label</code>, <code>text</code>, <code>value</code>, or the last column as the text to compare.</p>
+    </div>
+  </body>
+</html>
