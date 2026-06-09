@@ -1,117 +1,246 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Label QC Checker</title>
-    <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body {
-            font-family: 'Segoe UI', sans-serif;
-            background: #f0f2f5;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            padding: 20px;
-        }
-        .card {
-            background: white;
-            border-radius: 12px;
-            padding: 40px;
-            width: 100%;
-            max-width: 520px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-        }
-        h1 { font-size: 24px; color: #1a1a2e; margin-bottom: 8px; }
-        p.subtitle { color: #666; font-size: 14px; margin-bottom: 30px; }
-        .form-group { margin-bottom: 20px; }
-        label {
-            display: block;
-            font-size: 14px;
-            font-weight: 600;
-            color: #333;
-            margin-bottom: 6px;
-        }
-        input[type="file"] {
-            width: 100%;
-            padding: 10px;
-            border: 2px dashed #ccc;
-            border-radius: 8px;
-            font-size: 14px;
-            cursor: pointer;
-            background: #fafafa;
-            transition: border-color 0.2s;
-        }
-        input[type="file"]:hover { border-color: #4a90e2; }
-        .hint { font-size: 12px; color: #999; margin-top: 4px; }
-        button {
-            width: 100%;
-            padding: 14px;
-            background: #4a90e2;
-            color: white;
-            font-size: 16px;
-            font-weight: 600;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: background 0.2s;
-            margin-top: 10px;
-        }
-        button:hover { background: #357abd; }
-        button:disabled { background: #aaa; cursor: not-allowed; }
-        .loading {
-            display: none;
-            text-align: center;
-            margin-top: 16px;
-            color: #666;
-            font-size: 14px;
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Label QC Checker</title>
+
+<style>
+
+*{
+    box-sizing:border-box;
+    margin:0;
+    padding:0;
+}
+
+body{
+    font-family:'Segoe UI',sans-serif;
+    background:#f0f2f5;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    min-height:100vh;
+    padding:20px;
+}
+
+.card{
+    background:white;
+    border-radius:12px;
+    padding:40px;
+    width:100%;
+    max-width:600px;
+    box-shadow:0 8px 25px rgba(0,0,0,.1);
+}
+
+h1{
+    color:#1a1a2e;
+    margin-bottom:8px;
+}
+
+.subtitle{
+    color:#666;
+    margin-bottom:30px;
+    font-size:14px;
+}
+
+.form-group{
+    margin-bottom:20px;
+}
+
+label{
+    display:block;
+    font-weight:600;
+    margin-bottom:8px;
+    color:#333;
+}
+
+input[type="file"]{
+    width:100%;
+    padding:12px;
+    border:2px dashed #ccc;
+    border-radius:8px;
+    background:#fafafa;
+    cursor:pointer;
+}
+
+input[type="file"]:hover{
+    border-color:#4a90e2;
+}
+
+.hint{
+    font-size:12px;
+    color:#777;
+    margin-top:5px;
+}
+
+.file-name{
+    margin-top:6px;
+    color:#4a90e2;
+    font-size:13px;
+}
+
+button{
+    width:100%;
+    padding:14px;
+    border:none;
+    border-radius:8px;
+    background:#4a90e2;
+    color:white;
+    font-size:16px;
+    font-weight:600;
+    cursor:pointer;
+}
+
+button:hover{
+    background:#357abd;
+}
+
+button:disabled{
+    background:#999;
+    cursor:not-allowed;
+}
+
+.loading{
+    display:none;
+    text-align:center;
+    margin-top:15px;
+    color:#555;
+}
+
+.footer{
+    margin-top:20px;
+    text-align:center;
+    color:#999;
+    font-size:12px;
+}
+
+</style>
 </head>
+
 <body>
-    <div class="card">
-        <h1>🏷️ Label QC Checker</h1>
-        <p class="subtitle">
-            Compare sample labels against approved label using OCR
-        </p>
 
-        <form action="/compare" method="POST"
-              enctype="multipart/form-data"
-              onsubmit="handleSubmit()">
+<div class="card">
 
-            <div class="form-group">
-                <label>📋 Approval Label</label>
-                <input type="file" name="approval"
-                       accept=".png,.jpg,.jpeg,.bmp,.tif,.tiff"
-                       required>
-                <p class="hint">Upload the approved master label image</p>
-            </div>
+    <h1>🏷️ Label QC Checker</h1>
 
-            <div class="form-group">
-                <label>🔍 Sample Label(s)</label>
-                <input type="file" name="sample"
-                       accept=".png,.jpg,.jpeg,.bmp,.tif,.tiff"
-                       multiple required>
-                <p class="hint">Upload one or more sample labels to compare</p>
-            </div>
+    <p class="subtitle">
+        Upload an approved label and one or more sample labels.
+        OCR will extract text and compare them automatically.
+    </p>
 
-            <button type="submit" id="submitBtn">
-                ▶ Run Comparison
-            </button>
+    <form
+        action="/compare"
+        method="POST"
+        enctype="multipart/form-data"
+        onsubmit="handleSubmit()"
+    >
 
-            <div class="loading" id="loadingMsg">
-                ⏳ Analyzing labels, please wait...
-            </div>
-        </form>
+        <div class="form-group">
+
+            <label>📋 Approval Label</label>
+
+            <input
+                type="file"
+                id="approval"
+                name="approval"
+                accept=".png,.jpg,.jpeg,.bmp,.tif,.tiff"
+                required
+            >
+
+            <div id="approvalFile" class="file-name"></div>
+
+            <p class="hint">
+                Upload the approved master label image
+            </p>
+
+        </div>
+
+        <div class="form-group">
+
+            <label>🔍 Sample Label(s)</label>
+
+            <input
+                type="file"
+                id="sample"
+                name="sample"
+                accept=".png,.jpg,.jpeg,.bmp,.tif,.tiff"
+                multiple
+                required
+            >
+
+            <div id="sampleFiles" class="file-name"></div>
+
+            <p class="hint">
+                Upload one or more sample labels to compare
+            </p>
+
+        </div>
+
+        <button
+            type="submit"
+            id="submitBtn"
+        >
+            ▶ Run Comparison
+        </button>
+
+        <div
+            class="loading"
+            id="loadingMsg"
+        >
+            ⏳ Running OCR and comparing labels...
+        </div>
+
+    </form>
+
+    <div class="footer">
+        Flask + EasyOCR Label Inspection System
     </div>
 
-    <script>
-        function handleSubmit() {
-            document.getElementById("submitBtn").disabled = true;
-            document.getElementById("submitBtn").textContent = "Processing...";
-            document.getElementById("loadingMsg").style.display = "block";
-        }
-    </script>
+</div>
+
+<script>
+
+function handleSubmit(){
+
+    document.getElementById("submitBtn").disabled = true;
+
+    document.getElementById("submitBtn").innerHTML =
+        "⏳ Processing...";
+
+    document.getElementById("loadingMsg").style.display =
+        "block";
+}
+
+document
+.getElementById("approval")
+.addEventListener("change", function(){
+
+    if(this.files.length > 0){
+
+        document.getElementById("approvalFile")
+        .innerHTML =
+            "Selected: " + this.files[0].name;
+    }
+});
+
+document
+.getElementById("sample")
+.addEventListener("change", function(){
+
+    let names = [];
+
+    for(let i=0;i<this.files.length;i++){
+
+        names.push(this.files[i].name);
+    }
+
+    document.getElementById("sampleFiles")
+    .innerHTML =
+        names.join("<br>");
+});
+
+</script>
+
 </body>
 </html>

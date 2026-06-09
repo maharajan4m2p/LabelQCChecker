@@ -1,17 +1,21 @@
 import os
 import re
-import base64
 import json
+import base64
 import urllib.request
 import urllib.parse
+import easyocr
 
-from PIL import Image
 from io import BytesIO
+from PIL import Image
 from difflib import SequenceMatcher
 
+
 # --------------------------------------------------
-# OCR Configuration
+# Tesseract (Windows only)
 # --------------------------------------------------
+
+USE_TESSERACT = False
 
 if os.name == "nt":
     try:
@@ -25,27 +29,23 @@ if os.name == "nt":
 
     except Exception:
         USE_TESSERACT = False
-else:
-    USE_TESSERACT = False
 
 
 # --------------------------------------------------
-# OCR.Space API
+# OCR SPACE
 # --------------------------------------------------
 
 OCR_API_KEY = "K86258847888957"
+reader = easyocr.Reader(['en'], gpu=False)
 
 
 def ocr_space_api(image):
+
     try:
+
         buffered = BytesIO()
 
         image = image.convert("RGB")
-
-        max_size = 1200
-
-        if image.width > max_size or image.height > max_size:
-            image.thumbnail((max_size, max_size))
 
         image.save(
             buffered,
@@ -55,25 +55,24 @@ def ocr_space_api(image):
 
         img_base64 = base64.b64encode(
             buffered.getvalue()
-        ).decode()
+        ).decode("utf-8")
 
         payload = urllib.parse.urlencode({
             "apikey": OCR_API_KEY,
-            "base64Image": (
-                f"data:image/jpeg;base64,{img_base64}"
-            ),
+            "base64Image":
+                f"data:image/jpeg;base64,{img_base64}",
             "language": "eng",
             "OCREngine": 2,
             "scale": True
         }).encode()
 
-        req = urllib.request.Request(
+        request_obj = urllib.request.Request(
             "https://api.ocr.space/parse/image",
             data=payload
         )
 
         with urllib.request.urlopen(
-            req,
+            request_obj,
             timeout=60
         ) as response:
 
@@ -81,7 +80,7 @@ def ocr_space_api(image):
                 response.read().decode("utf-8")
             )
 
-        print("OCR API RESPONSE:")
+        print("\nOCR RESPONSE:")
         print(result)
 
         parsed = result.get(
@@ -98,96 +97,137 @@ def ocr_space_api(image):
         return ""
 
     except Exception as e:
+
         print("OCR API ERROR:", str(e))
         return ""
 
 
 # --------------------------------------------------
-# Extract OCR Text
+# OCR TEXT EXTRACTION
 # --------------------------------------------------
 
 def extract_text(image_path):
+
     try:
 
         print(f"\nReading image: {image_path}")
 
-        image = Image.open(image_path)
+        results = reader.readtext(image_path)
 
+        lines = []
+
+        for item in results:
+
+            text = item[1].strip()
+
+            if text:
+                lines.append(text)
+
+        extracted_text = "\n".join(lines)
+
+        if extracted_text.strip():
+
+            print("\nOCR TEXT START")
+            print(extracted_text)
+            print("OCR TEXT END\n")
+
+            return extracted_text
+
+        image = Image.open(image_path)
         image = image.convert("L")
 
-        if USE_TESSERACT:
-
-            import pytesseract
-
-            text = pytesseract.image_to_string(
-                image,
-                config="--oem 1 --psm 6"
-            )
-
-        else:
-
-            text = ocr_space_api(image)
-
-        print("\nOCR TEXT START")
-        print(text)
-        print("OCR TEXT END\n")
-
-        return text.strip()
+        return ocr_space_api(image)
 
     except Exception as e:
 
-        print("TEXT EXTRACTION ERROR:", str(e))
-        return ""
+        print("EasyOCR ERROR:", str(e))
+
+        try:
+
+            image = Image.open(image_path)
+            image = image.convert("L")
+
+            return ocr_space_api(image)
+
+        except Exception as e:
+
+            print("OCR ERROR:", str(e))
+            return ""
 
 
 # --------------------------------------------------
-# Parse Common Fields
+# FIELD EXTRACTION
 # --------------------------------------------------
+
+def normalize_text(text):
+    text = re.sub(r"[\r\n]+", " ", text)
+    text = re.sub(r"\s+", " ", text)
+    return text.strip()
+
+
+def normalize_key(key):
+    key = re.sub(r"[^\w\s]", " ", key)
+    key = re.sub(r"\s+", " ", key)
+    return key.strip().upper()
+
+
+def normalize_value(value):
+    value = re.sub(r"\s+", " ", value)
+    return value.strip()
+
 
 def parse_fields(text):
 
     fields = {}
 
-    patterns = {
-        "STYLE": r"STYLE\s*[:\-]?\s*(.+)",
-        "SIZE": r"SIZE\s*[:\-]?\s*(.+)",
-        "COLOR": r"COLOR\s*[:\-]?\s*(.+)",
-        "PO": r"PO\s*[:\-]?\s*(.+)",
-        "COUNTRY": r"COUNTRY\s*[:\-]?\s*(.+)",
-        "FABRIC": r"FABRIC\s*[:\-]?\s*(.+)",
-        "RN": r"RN\s*[:\-]?\s*(.+)"
-    }
+    lines = text.splitlines()
 
-    for line in text.splitlines():
+    for line in lines:
 
         line = line.strip()
 
         if not line:
             continue
 
-        for key, pattern in patterns.items():
+        line = normalize_text(line)
 
-            if key in fields:
-                continue
+        key = None
+        value = None
 
-            match = re.search(
-                pattern,
-                line,
-                re.IGNORECASE
-            )
+        if ":" in line:
+            parts = line.split(":", 1)
+            key = parts[0].strip()
+            value = parts[1].strip()
 
-            if match:
+        elif "=" in line:
+            parts = line.split("=", 1)
+            key = parts[0].strip()
+            value = parts[1].strip()
 
-                value = match.group(1).strip()
+        elif "-" in line:
+            parts = line.split("-", 1)
+            key = parts[0].strip()
+            value = parts[1].strip()
 
-                if value:
-                    fields[key] = value
+        elif len(line.split()) >= 2:
+            parts = line.split(None, 1)
+            key = parts[0].strip()
+            value = parts[1].strip()
+
+        if not key or not value:
+            continue
+
+        key = normalize_key(key)
+        value = normalize_value(value)
+
+        if key and value:
+            fields[key] = value
 
     return fields
 
 
 # --------------------------------------------------
-# Compare Fields
+# FIELD COMPARISON
 # --------------------------------------------------
 
 def compare_fields(
@@ -195,87 +235,114 @@ def compare_fields(
     sample_fields
 ):
 
-    all_keys = (
-        set(approval_fields.keys()) |
-        set(sample_fields.keys())
-    )
-
     results = []
-
-    matches = 0
-
+    match_count = 0
     missing_fields = []
     extra_fields = []
+    mismatch_fields = []
 
-    for key in sorted(all_keys):
+    approval_keys = list(approval_fields.keys())
+    sample_keys = list(sample_fields.keys())
+    used_sample_keys = set()
 
-        approval_value = approval_fields.get(
-            key,
-            ""
-        )
-
-        sample_value = sample_fields.get(
-            key,
-            ""
-        )
-
-        if approval_value and not sample_value:
-            missing_fields.append(key)
-
-        if sample_value and not approval_value:
-            extra_fields.append(key)
-
-        similarity = SequenceMatcher(
-            None,
-            approval_value.lower(),
-            sample_value.lower()
-        ).ratio()
-
-        similarity_pct = round(
-            similarity * 100,
-            1
-        )
-
-        status = (
-            "MATCH"
-            if similarity >= 0.90
-            else "MISMATCH"
-        )
+    def add_row(
+        field,
+        approval_value,
+        sample_value,
+        status,
+        key_similarity=0.0,
+        value_similarity=0.0,
+        note=""
+    ):
+        nonlocal match_count
 
         if status == "MATCH":
-            matches += 1
+            match_count += 1
 
         results.append({
-            "field": key,
+            "field": f"{field}{note}",
             "approval": approval_value or "-",
             "sample": sample_value or "-",
-            "similarity": similarity_pct,
+            "key_similarity": round(key_similarity * 100, 1),
+            "value_similarity": round(value_similarity * 100, 1),
+            "similarity": round(value_similarity * 100, 1),
             "status": status
         })
 
-    total = len(all_keys)
+    for approval_key in approval_keys:
+        approval_value = approval_fields[approval_key]
+        best_match = None
 
-    accuracy = (
-        round(
-            matches / total * 100,
-            2
-        )
-        if total
-        else 0
-    )
+        for sample_key in sample_keys:
+            if sample_key in used_sample_keys:
+                continue
+
+            key_similarity = SequenceMatcher(None, approval_key, sample_key).ratio()
+            sample_value = sample_fields[sample_key]
+            value_similarity = SequenceMatcher(
+                None,
+                approval_value.lower(),
+                sample_value.lower()
+            ).ratio() if sample_value else 0.0
+            combined_score = (key_similarity * 0.7) + (value_similarity * 0.3)
+
+            if best_match is None or combined_score > best_match[0]:
+                best_match = (combined_score, sample_key, key_similarity, value_similarity)
+
+        if best_match and best_match[0] >= 0.75:
+            _, sample_key, key_similarity, value_similarity = best_match
+            sample_value = sample_fields[sample_key]
+            used_sample_keys.add(sample_key)
+            note = ""
+
+            if key_similarity < 0.95:
+                note = f" (key fuzzy {round(key_similarity * 100, 1)}%)"
+
+            status = "MATCH" if value_similarity >= 0.90 else "MISMATCH"
+
+            if status == "MISMATCH":
+                mismatch_fields.append(
+                    f"{approval_key}: expected '{approval_value}' but got '{sample_value}'"
+                )
+
+            add_row(
+                approval_key,
+                approval_value,
+                sample_value,
+                status,
+                key_similarity=key_similarity,
+                value_similarity=value_similarity,
+                note=note
+            )
+
+        else:
+            missing_fields.append(f"{approval_key}: {approval_value}")
+            add_row(approval_key, approval_value, "", "MISSING")
+
+    for sample_key in sample_keys:
+        if sample_key in used_sample_keys:
+            continue
+
+        sample_value = sample_fields[sample_key]
+        extra_fields.append(f"{sample_key}: {sample_value}")
+        add_row(sample_key, "", sample_value, "EXTRA")
+
+    total = len(approval_keys) if approval_keys else len(results)
+    accuracy = round((match_count / total) * 100, 2) if total > 0 else 0
 
     return {
         "accuracy": accuracy,
-        "match_count": matches,
+        "match_count": match_count,
         "total_fields": total,
         "results": results,
         "missing_fields": missing_fields,
-        "extra_fields": extra_fields
+        "extra_fields": extra_fields,
+        "mismatch_fields": mismatch_fields
     }
 
 
 # --------------------------------------------------
-# Main Comparison Function
+# MAIN FUNCTION
 # --------------------------------------------------
 
 def compare_label_images(
@@ -299,7 +366,9 @@ def compare_label_images(
             "total_fields": 0,
             "results": [],
             "missing_fields": [],
-            "extra_fields": []
+            "extra_fields": [],
+            "approval_text": "",
+            "sample_text": ""
         }
 
     approval_fields = parse_fields(
@@ -310,15 +379,24 @@ def compare_label_images(
         sample_text
     )
 
-    # If fields detected, compare fields
+    print("\nAPPROVAL FIELDS:")
+    print(approval_fields)
+
+    print("\nSAMPLE FIELDS:")
+    print(sample_fields)
+
     if approval_fields or sample_fields:
 
-        return compare_fields(
+        result = compare_fields(
             approval_fields,
             sample_fields
         )
 
-    # Fallback to full text comparison
+        result["approval_text"] = approval_text
+        result["sample_text"] = sample_text
+
+        return result
+
     similarity = SequenceMatcher(
         None,
         approval_text.lower(),
@@ -348,5 +426,7 @@ def compare_label_images(
             }
         ],
         "missing_fields": [],
-        "extra_fields": []
+        "extra_fields": [],
+        "approval_text": approval_text,
+        "sample_text": sample_text
     }

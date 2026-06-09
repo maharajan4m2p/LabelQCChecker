@@ -1,121 +1,108 @@
-import os
-import uuid
-import traceback
+import easyocr
+import re
 
-from flask import Flask, render_template, request
-from werkzeug.utils import secure_filename
-
-from label_compare import compare_label_images
-
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-UPLOAD_FOLDER = os.path.join(BASE_DIR, "uploads")
-
-ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "bmp", "tif", "tiff"}
-
-app = Flask(__name__)
-app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
-
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+# Initialize OCR reader once
+reader = easyocr.Reader(['en'], gpu=False)
 
 
-def allowed_file(filename):
-    return (
-        "." in filename and
-        filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
-    )
-
-
-@app.route("/")
-def index():
-    return render_template("index.html")
-
-
-@app.route("/compare", methods=["POST"])
-def compare():
+def extract_text(image_path):
+    """
+    Extract text from image using EasyOCR.
+    """
     try:
-        approval = request.files.get("approval")
-        samples = request.files.getlist("sample")
+        results = reader.readtext(image_path)
 
-        if not approval or approval.filename == "":
-            return render_template(
-                "results.html",
-                error="Approval file missing.",
-                comparison=None
-            ), 400
+        text_lines = []
 
-        if not samples or all(s.filename == "" for s in samples):
-            return render_template(
-                "results.html",
-                error="At least one sample file is required.",
-                comparison=None
-            ), 400
+        for result in results:
+            text = result[1].strip()
 
-        if not allowed_file(approval.filename):
-            return render_template(
-                "results.html",
-                error="Unsupported approval file type.",
-                comparison=None
-            ), 400
+            if text:
+                text_lines.append(text)
 
-        approval_filename = (
-            str(uuid.uuid4()) + "_" + secure_filename(approval.filename)
-        )
-        approval_path = os.path.join(
-            app.config["UPLOAD_FOLDER"], approval_filename
-        )
-        approval.save(approval_path)
-        print(f"Approval saved: {approval_path}")
-
-        sample_results = []
-
-        for sample in samples:
-            if not sample:
-                continue
-            if sample.filename == "":
-                continue
-            if not allowed_file(sample.filename):
-                continue
-
-            sample_filename = (
-                str(uuid.uuid4()) + "_" + secure_filename(sample.filename)
-            )
-            sample_path = os.path.join(
-                app.config["UPLOAD_FOLDER"], sample_filename
-            )
-            sample.save(sample_path)
-            print(f"Sample saved: {sample_path}")
-
-            result = compare_label_images(approval_path, sample_path)
-            result["filename"] = sample.filename
-            sample_results.append(result)
-
-        if not sample_results:
-            return render_template(
-                "results.html",
-                error="No valid sample files were uploaded.",
-                comparison=None
-            ), 400
-
-        comparison = {
-            "approval_filename": approval.filename,
-            "samples": sample_results
-        }
-
-        return render_template(
-            "results.html",
-            comparison=comparison,
-            error=None
-        ), 200
+        return text_lines
 
     except Exception as e:
-        traceback.print_exc()
-        return render_template(
-            "results.html",
-            error=f"Server error: {str(e)}",
-            comparison=None
-        ), 500
+        print(f"OCR Error: {e}")
+        return []
 
 
-if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port, debug=False)
+def clean_text(lines):
+    """
+    Clean OCR output.
+    """
+    cleaned = []
+
+    for line in lines:
+
+        line = line.strip()
+
+        line = re.sub(r'\s+', ' ', line)
+
+        if line:
+            cleaned.append(line)
+
+    return cleaned
+
+
+def compare_label_images(approval_image, sample_image):
+    """
+    Compare approval label with sample label.
+    """
+
+    approval_text = extract_text(approval_image)
+    sample_text = extract_text(sample_image)
+
+    approval_text = clean_text(approval_text)
+    sample_text = clean_text(sample_text)
+
+    approval_set = set(
+        item.lower().strip()
+        for item in approval_text
+    )
+
+    sample_set = set(
+        item.lower().strip()
+        for item in sample_text
+    )
+
+    missing_data = sorted(
+        list(approval_set - sample_set)
+    )
+
+    extra_data = sorted(
+        list(sample_set - approval_set)
+    )
+
+    matched_data = sorted(
+        list(approval_set & sample_set)
+    )
+
+    total_required = len(approval_set)
+
+    total_found = len(matched_data)
+
+    match_percentage = 0
+
+    if total_required > 0:
+        match_percentage = round(
+            (total_found / total_required) * 100,
+            2
+        )
+
+    status = "PASS"
+
+    if missing_data:
+        status = "FAIL"
+
+    return {
+        "status": status,
+        "approval_text": approval_text,
+        "sample_text": sample_text,
+        "missing_data": missing_data,
+        "extra_data": extra_data,
+        "matched_data": matched_data,
+        "match_percentage": match_percentage,
+        "total_required": total_required,
+        "total_found": total_found
+    }
