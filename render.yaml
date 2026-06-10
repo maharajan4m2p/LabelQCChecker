@@ -1,7 +1,4 @@
 services:
   - type: web
-    name: labelqcchecker
-    runtime: docker
-    dockerfilePath: ./Dockerfile
-    plan: free
-    healthCheckPath: /
+    name: label-qc-checker
+    env: docker
