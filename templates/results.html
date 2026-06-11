@@ -1,349 +1,151 @@
 <!DOCTYPE html>
-<html>
-
+<html lang="en">
 <head>
-
-    <title>Label QC Result</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QC Results</title>
 
     <style>
 
-        *{
-            margin:0;
-            padding:0;
-            box-sizing:border-box;
-            font-family:Segoe UI,sans-serif;
-        }
-
         body{
-            background:linear-gradient(
-                135deg,
-                #0f172a,
-                #1e3a8a
-            );
-            min-height:100vh;
-            padding:25px;
+            font-family: Arial, sans-serif;
+            background:#f4f6f9;
+            padding:30px;
         }
 
-        .container{
-            max-width:1400px;
-            margin:auto;
-        }
-
-        .header{
-            background:white;
-            padding:20px 30px;
-            border-radius:15px;
-            margin-bottom:20px;
-            display:flex;
-            justify-content:space-between;
-            align-items:center;
-        }
-
-        .title{
-            font-size:28px;
-            font-weight:bold;
-            color:#1e3a8a;
-        }
-
-        .owner{
-            background:#2563eb;
-            color:white;
-            padding:10px 20px;
-            border-radius:25px;
-            font-weight:bold;
-        }
-
-        .result-box{
-            background:white;
-            border-radius:15px;
-            padding:25px;
-            margin-bottom:20px;
+        h1{
             text-align:center;
+            margin-bottom:25px;
+        }
+
+        table{
+            width:100%;
+            border-collapse:collapse;
+            background:white;
+            box-shadow:0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        th{
+            background:#007bff;
+            color:white;
+            padding:12px;
+        }
+
+        td{
+            padding:12px;
+            border:1px solid #ddd;
+            text-align:center;
+        }
+
+        tr:nth-child(even){
+            background:#f8f8f8;
         }
 
         .approved{
             color:green;
-            font-size:36px;
             font-weight:bold;
         }
 
         .partial{
             color:orange;
-            font-size:36px;
             font-weight:bold;
         }
 
         .rejected{
             color:red;
-            font-size:36px;
             font-weight:bold;
         }
 
-        .probability{
-            font-size:50px;
-            font-weight:bold;
-            color:#2563eb;
-            margin-top:15px;
-        }
-
-        .cards{
-            display:grid;
-            grid-template-columns:repeat(4,1fr);
-            gap:15px;
-            margin-bottom:20px;
-        }
-
-        .card{
-            background:white;
-            border-radius:15px;
-            padding:25px;
+        .btn{
+            display:block;
+            width:220px;
+            margin:30px auto;
             text-align:center;
-        }
-
-        .card h3{
-            color:#475569;
-            margin-bottom:10px;
-        }
-
-        .card h1{
-            color:#2563eb;
-        }
-
-        .section{
-            background:white;
-            border-radius:15px;
-            padding:25px;
-            margin-bottom:20px;
-        }
-
-        .section h2{
-            margin-bottom:15px;
-            color:#1e293b;
-        }
-
-        .missing{
-            color:red;
-            font-weight:bold;
-        }
-
-        .extra{
-            color:orange;
-            font-weight:bold;
-        }
-
-        ul{
-            padding-left:20px;
-        }
-
-        li{
-            margin-bottom:8px;
-            color:#111827;
-        }
-
-        .compare-table{
-            width:100%;
-            border-collapse:collapse;
-        }
-
-        .compare-table th{
-            background:#2563eb;
-            color:white;
             padding:12px;
-        }
-
-        .compare-table td{
-            border:1px solid #ddd;
-            padding:10px;
-            color:#111827;
-        }
-
-        .compare-table tr:nth-child(even){
-            background:#f8fafc;
-        }
-
-        .back-btn{
-            display:inline-block;
-            background:#2563eb;
+            background:#007bff;
             color:white;
-            padding:12px 25px;
-            border-radius:10px;
             text-decoration:none;
-            font-weight:bold;
+            border-radius:5px;
         }
 
-        .back-btn:hover{
-            background:#1d4ed8;
-        }
-
-        @media(max-width:900px){
-
-            .cards{
-                grid-template-columns:repeat(2,1fr);
-            }
-
+        .btn:hover{
+            background:#0056b3;
         }
 
     </style>
-
 </head>
-
 <body>
 
-<div class="container">
+<h1>Label QC Comparison Results</h1>
 
-    <div class="header">
+<table>
 
-        <div class="title">
-            Label QC Dashboard
-        </div>
+    <tr>
+        <th>Sample File</th>
+        <th>Verdict</th>
+        <th>Probability</th>
+        <th>Matched</th>
+        <th>Missing</th>
+        <th>Extra</th>
+    </tr>
 
-        <div class="owner">
-            Maharajan
-        </div>
+    {% for item in results %}
 
-    </div>
+    <tr>
 
-    <div class="result-box">
+        <td>
+            {{ item.filename }}
+        </td>
 
-        {% if results.verdict == "APPROVED" %}
+        <td>
 
-            <div class="approved">
-                ✅ APPROVED
-            </div>
+            {% if item.result.verdict == "APPROVED" %}
 
-        {% elif results.verdict == "PARTIALLY APPROVED" %}
+                <span class="approved">
+                    {{ item.result.verdict }}
+                </span>
 
-            <div class="partial">
-                ⚠️ PARTIALLY APPROVED
-            </div>
+            {% elif item.result.verdict == "PARTIALLY APPROVED" %}
 
-        {% else %}
+                <span class="partial">
+                    {{ item.result.verdict }}
+                </span>
 
-            <div class="rejected">
-                ❌ NOT APPROVED
-            </div>
+            {% else %}
 
-        {% endif %}
+                <span class="rejected">
+                    {{ item.result.verdict }}
+                </span>
 
-        <div class="probability">
-            {{ results.probability }}%
-        </div>
+            {% endif %}
 
-        <h3>
-            Approval Probability
-        </h3>
+        </td>
 
-    </div>
+        <td>
+            {{ item.result.probability }}%
+        </td>
 
-    <div class="cards">
+        <td>
+            {{ item.result.matched_count }}
+        </td>
 
-        <div class="card">
-            <h3>Total Fields</h3>
-            <h1>{{ results.total_fields }}</h1>
-        </div>
+        <td>
+            {{ item.result.missing_count }}
+        </td>
 
-        <div class="card">
-            <h3>Found in Sample</h3>
-            <h1>{{ results.matched_count }}</h1>
-        </div>
+        <td>
+            {{ item.result.extra_count }}
+        </td>
 
-        <div class="card">
-            <h3>Missing in Sample</h3>
-            <h1>{{ results.missing_count }}</h1>
-        </div>
+    </tr>
 
-        <div class="card">
-            <h3>Extra in Sample</h3>
-            <h1>{{ results.extra_count }}</h1>
-        </div>
+    {% endfor %}
 
-    </div>
+</table>
 
-    <div class="section">
-
-        <h2 class="missing">
-            Missing Information
-        </h2>
-
-        <ul>
-
-            {% for item in results.missing_fields %}
-
-                <li>
-                    ❌ {{ item }}
-                </li>
-
-            {% endfor %}
-
-        </ul>
-
-    </div>
-
-    <div class="section">
-
-        <h2 class="extra">
-            Extra Information Found
-        </h2>
-
-        <ul>
-
-            {% for item in results.extra_fields %}
-
-                <li>
-                    ⚠️ {{ item }}
-                </li>
-
-            {% endfor %}
-
-        </ul>
-
-    </div>
-
-    <div class="section">
-
-        <h2>
-            Approval vs Sample Comparison
-        </h2>
-
-        <table class="compare-table">
-
-            <tr>
-                <th>Approval Label</th>
-                <th>Sample Label</th>
-            </tr>
-
-            {% for row in results.comparison_rows %}
-
-            <tr>
-
-                <td>
-                    {{ row.approval }}
-                </td>
-
-                <td>
-                    {{ row.sample }}
-                </td>
-
-            </tr>
-
-            {% endfor %}
-
-        </table>
-
-    </div>
-
-    <div style="text-align:center; margin-top:20px;">
-
-        <a
-            href="/"
-            class="back-btn"
-        >
-            Back To Upload
-        </a>
-
-    </div>
-
-</div>
+<a href="/" class="btn">
+    Compare More Labels
+</a>
 
 </body>
 </html>

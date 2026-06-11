@@ -53,15 +53,16 @@ def compare():
         "approval"
     )
 
-    sample = request.files.get(
+    samples = request.files.getlist(
         "sample"
     )
 
-    if not approval or not sample:
+    if not approval or len(samples) == 0:
 
         return (
-            "Please upload both "
-            "Approval and Sample labels."
+            "Please upload one Approval "
+            "image and at least one "
+            "Sample image."
         )
 
     approval_path = os.path.join(
@@ -71,29 +72,41 @@ def compare():
         )
     )
 
-    sample_path = os.path.join(
-        app.config["UPLOAD_FOLDER"],
-        secure_filename(
-            sample.filename
-        )
-    )
-
     approval.save(
         approval_path
     )
 
-    sample.save(
-        sample_path
-    )
+    all_results = []
 
-    results = compare_labels(
-        approval_path,
-        sample_path
-    )
+    for sample in samples:
+
+        if sample.filename == "":
+            continue
+
+        sample_path = os.path.join(
+            app.config["UPLOAD_FOLDER"],
+            secure_filename(
+                sample.filename
+            )
+        )
+
+        sample.save(
+            sample_path
+        )
+
+        result = compare_labels(
+            approval_path,
+            sample_path
+        )
+
+        all_results.append({
+            "filename": sample.filename,
+            "result": result
+        })
 
     return render_template(
         "results.html",
-        results=results
+        results=all_results
     )
 
 
