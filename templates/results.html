@@ -3,42 +3,39 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>QC Results</title>
+    <title>Label QC Detailed Results</title>
 
     <style>
 
+        *{
+            margin:0;
+            padding:0;
+            box-sizing:border-box;
+        }
+
         body{
-            font-family: Arial, sans-serif;
+            font-family:Arial,sans-serif;
             background:#f4f6f9;
-            padding:30px;
+            padding:20px;
         }
 
         h1{
             text-align:center;
-            margin-bottom:25px;
+            margin-bottom:30px;
+            color:#333;
         }
 
-        table{
-            width:100%;
-            border-collapse:collapse;
+        .sample-card{
             background:white;
+            margin-bottom:30px;
+            padding:20px;
+            border-radius:10px;
             box-shadow:0 2px 10px rgba(0,0,0,0.1);
         }
 
-        th{
-            background:#007bff;
-            color:white;
-            padding:12px;
-        }
-
-        td{
-            padding:12px;
-            border:1px solid #ddd;
-            text-align:center;
-        }
-
-        tr:nth-child(even){
-            background:#f8f8f8;
+        .sample-title{
+            color:#007bff;
+            margin-bottom:15px;
         }
 
         .approved{
@@ -54,6 +51,80 @@
         .rejected{
             color:red;
             font-weight:bold;
+        }
+
+        .stats{
+            display:flex;
+            flex-wrap:wrap;
+            gap:15px;
+            margin:15px 0;
+        }
+
+        .stat-box{
+            background:#f8f9fa;
+            border:1px solid #ddd;
+            padding:10px 15px;
+            border-radius:5px;
+        }
+
+        h3{
+            margin-top:20px;
+            margin-bottom:10px;
+            color:#333;
+        }
+
+        ul{
+            margin-left:25px;
+            margin-bottom:15px;
+        }
+
+        li{
+            margin-bottom:5px;
+        }
+
+        .matched{
+            color:green;
+        }
+
+        .missing{
+            color:red;
+        }
+
+        .extra{
+            color:orange;
+        }
+
+        table{
+            width:100%;
+            border-collapse:collapse;
+            margin-top:10px;
+            margin-bottom:20px;
+        }
+
+        th{
+            background:#007bff;
+            color:white;
+            padding:10px;
+            border:1px solid #ddd;
+        }
+
+        td{
+            border:1px solid #ddd;
+            padding:10px;
+        }
+
+        tr:nth-child(even){
+            background:#f8f8f8;
+        }
+
+        pre{
+            background:#f8f8f8;
+            border:1px solid #ddd;
+            padding:15px;
+            border-radius:5px;
+            white-space:pre-wrap;
+            word-wrap:break-word;
+            margin-bottom:20px;
         }
 
         .btn{
@@ -76,72 +147,179 @@
 </head>
 <body>
 
-<h1>Label QC Comparison Results</h1>
+<h1>Label QC Detailed Results</h1>
 
-<table>
+{% for item in results %}
 
-    <tr>
-        <th>Sample File</th>
-        <th>Verdict</th>
-        <th>Probability</th>
-        <th>Matched</th>
-        <th>Missing</th>
-        <th>Extra</th>
-    </tr>
+<div class="sample-card">
 
-    {% for item in results %}
+    <h2 class="sample-title">
+        Sample File: {{ item.filename }}
+    </h2>
 
-    <tr>
+    <p>
+        <strong>Verdict:</strong>
 
-        <td>
-            {{ item.filename }}
-        </td>
+        {% if item.result.verdict == "APPROVED" %}
+            <span class="approved">
+                {{ item.result.verdict }}
+            </span>
 
-        <td>
+        {% elif item.result.verdict == "PARTIALLY APPROVED" %}
+            <span class="partial">
+                {{ item.result.verdict }}
+            </span>
 
-            {% if item.result.verdict == "APPROVED" %}
+        {% else %}
+            <span class="rejected">
+                {{ item.result.verdict }}
+            </span>
+        {% endif %}
+    </p>
 
-                <span class="approved">
-                    {{ item.result.verdict }}
-                </span>
+    <div class="stats">
 
-            {% elif item.result.verdict == "PARTIALLY APPROVED" %}
+        <div class="stat-box">
+            Probability:
+            <strong>
+                {{ item.result.probability }}%
+            </strong>
+        </div>
 
-                <span class="partial">
-                    {{ item.result.verdict }}
-                </span>
+        <div class="stat-box">
+            Total Fields:
+            <strong>
+                {{ item.result.total_fields }}
+            </strong>
+        </div>
 
-            {% else %}
+        <div class="stat-box">
+            Matched:
+            <strong>
+                {{ item.result.matched_count }}
+            </strong>
+        </div>
 
-                <span class="rejected">
-                    {{ item.result.verdict }}
-                </span>
+        <div class="stat-box">
+            Missing:
+            <strong>
+                {{ item.result.missing_count }}
+            </strong>
+        </div>
 
-            {% endif %}
+        <div class="stat-box">
+            Extra:
+            <strong>
+                {{ item.result.extra_count }}
+            </strong>
+        </div>
 
-        </td>
+    </div>
 
-        <td>
-            {{ item.result.probability }}%
-        </td>
+    <h3>Matched Fields</h3>
 
-        <td>
-            {{ item.result.matched_count }}
-        </td>
+    <ul>
 
-        <td>
-            {{ item.result.missing_count }}
-        </td>
+        {% if item.result.matched_fields %}
 
-        <td>
-            {{ item.result.extra_count }}
-        </td>
+            {% for field in item.result.matched_fields %}
 
-    </tr>
+                <li class="matched">
+                    ✓ {{ field }}
+                </li>
 
-    {% endfor %}
+            {% endfor %}
 
-</table>
+        {% else %}
+
+            <li>No matched fields found</li>
+
+        {% endif %}
+
+    </ul>
+
+    <h3>Missing Fields</h3>
+
+    <ul>
+
+        {% if item.result.missing_fields %}
+
+            {% for field in item.result.missing_fields %}
+
+                <li class="missing">
+                    ✗ {{ field }}
+                </li>
+
+            {% endfor %}
+
+        {% else %}
+
+            <li>No missing fields</li>
+
+        {% endif %}
+
+    </ul>
+
+    <h3>Extra Fields</h3>
+
+    <ul>
+
+        {% if item.result.extra_fields %}
+
+            {% for field in item.result.extra_fields %}
+
+                <li class="extra">
+                    ⚠ {{ field }}
+                </li>
+
+            {% endfor %}
+
+        {% else %}
+
+            <li>No extra fields</li>
+
+        {% endif %}
+
+    </ul>
+
+    <h3>Approval vs Sample Comparison</h3>
+
+    <table>
+
+        <tr>
+            <th>Approval Label</th>
+            <th>Sample Label</th>
+        </tr>
+
+        {% for row in item.result.comparison_rows %}
+
+        <tr>
+
+            <td>
+                {{ row.approval }}
+            </td>
+
+            <td>
+                {{ row.sample }}
+            </td>
+
+        </tr>
+
+        {% endfor %}
+
+    </table>
+
+    <h3>Approval OCR Text</h3>
+
+    <pre>{{ item.result.approval_text }}</pre>
+
+    <h3>Sample OCR Text</h3>
+
+    <pre>{{ item.result.sample_text }}</pre>
+
+</div>
+
+{% endfor %}
 
 <a href="/" class="btn">
     Compare More Labels
