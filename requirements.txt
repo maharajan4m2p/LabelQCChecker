@@ -1,8 +1,6 @@
 Flask
-Werkzeug
-pytesseract
-Pillow
+gunicorn
 opencv-python-headless
 numpy
-pandas
-gunicorn
+pytesseract
+pillow
