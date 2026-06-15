@@ -9,6 +9,9 @@ from werkzeug.utils import (
 )
 
 import os
+print("CURRENT DIR:", os.getcwd())
+print("FILES:", os.listdir("."))
+print("TEMPLATES:", os.path.exists("templates"))
 
 from label_compare import (
     compare_labels
