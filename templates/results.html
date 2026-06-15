@@ -1,329 +1,360 @@
-<!DOCTYPE html>
-<html lang="en">
+<!DOCTYPE html><html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Label QC Detailed Results</title>
+    <title>Label QC Detailed Results</title><style>
 
-    <style>
+    *{
+        margin:0;
+        padding:0;
+        box-sizing:border-box;
+    }
 
-        *{
-            margin:0;
-            padding:0;
-            box-sizing:border-box;
-        }
+    body{
+        font-family:Arial,sans-serif;
+        background:#f4f6f9;
+        padding:20px;
+    }
 
-        body{
-            font-family:Arial,sans-serif;
-            background:#f4f6f9;
-            padding:20px;
-        }
+    h1{
+        text-align:center;
+        margin-bottom:30px;
+        color:#333;
+    }
 
-        h1{
-            text-align:center;
-            margin-bottom:30px;
-            color:#333;
-        }
+    .sample-card{
+        background:white;
+        margin-bottom:30px;
+        padding:20px;
+        border-radius:10px;
+        box-shadow:0 2px 10px rgba(0,0,0,0.1);
+    }
 
-        .sample-card{
-            background:white;
-            margin-bottom:30px;
-            padding:20px;
-            border-radius:10px;
-            box-shadow:0 2px 10px rgba(0,0,0,0.1);
-        }
+    .sample-title{
+        color:#007bff;
+        margin-bottom:15px;
+    }
 
-        .sample-title{
-            color:#007bff;
-            margin-bottom:15px;
-        }
+    .approved{
+        color:green;
+        font-weight:bold;
+    }
 
-        .approved{
-            color:green;
-            font-weight:bold;
-        }
+    .partial{
+        color:orange;
+        font-weight:bold;
+    }
 
-        .partial{
-            color:orange;
-            font-weight:bold;
-        }
+    .rejected{
+        color:red;
+        font-weight:bold;
+    }
 
-        .rejected{
-            color:red;
-            font-weight:bold;
-        }
+    .stats{
+        display:flex;
+        flex-wrap:wrap;
+        gap:15px;
+        margin:15px 0;
+    }
 
-        .stats{
-            display:flex;
-            flex-wrap:wrap;
-            gap:15px;
-            margin:15px 0;
-        }
+    .stat-box{
+        background:#f8f9fa;
+        border:1px solid #ddd;
+        padding:10px 15px;
+        border-radius:5px;
+    }
 
-        .stat-box{
-            background:#f8f9fa;
-            border:1px solid #ddd;
-            padding:10px 15px;
-            border-radius:5px;
-        }
+    h3{
+        margin-top:20px;
+        margin-bottom:10px;
+        color:#333;
+    }
 
-        h3{
-            margin-top:20px;
-            margin-bottom:10px;
-            color:#333;
-        }
+    ul{
+        margin-left:25px;
+        margin-bottom:15px;
+    }
 
-        ul{
-            margin-left:25px;
-            margin-bottom:15px;
-        }
+    li{
+        margin-bottom:5px;
+    }
 
-        li{
-            margin-bottom:5px;
-        }
+    .matched{
+        color:green;
+    }
 
-        .matched{
-            color:green;
-        }
+    .missing{
+        color:red;
+    }
 
-        .missing{
-            color:red;
-        }
+    .extra{
+        color:orange;
+    }
 
-        .extra{
-            color:orange;
-        }
+    table{
+        width:100%;
+        border-collapse:collapse;
+        margin-top:10px;
+        margin-bottom:20px;
+    }
 
-        table{
-            width:100%;
-            border-collapse:collapse;
-            margin-top:10px;
-            margin-bottom:20px;
-        }
+    th{
+        background:#007bff;
+        color:white;
+        padding:10px;
+        border:1px solid #ddd;
+    }
 
-        th{
-            background:#007bff;
-            color:white;
-            padding:10px;
-            border:1px solid #ddd;
-        }
+    td{
+        border:1px solid #ddd;
+        padding:10px;
+    }
 
-        td{
-            border:1px solid #ddd;
-            padding:10px;
-        }
+    tr:nth-child(even){
+        background:#f8f8f8;
+    }
 
-        tr:nth-child(even){
-            background:#f8f8f8;
-        }
+    pre{
+        background:#f8f8f8;
+        border:1px solid #ddd;
+        padding:15px;
+        border-radius:5px;
+        white-space:pre-wrap;
+        word-wrap:break-word;
+        margin-bottom:20px;
+        max-height:350px;
+        overflow:auto;
+    }
 
-        pre{
-            background:#f8f8f8;
-            border:1px solid #ddd;
-            padding:15px;
-            border-radius:5px;
-            white-space:pre-wrap;
-            word-wrap:break-word;
-            margin-bottom:20px;
-        }
+    .btn{
+        display:block;
+        width:250px;
+        margin:30px auto;
+        text-align:center;
+        padding:12px;
+        background:#007bff;
+        color:white;
+        text-decoration:none;
+        border-radius:5px;
+    }
 
-        .btn{
-            display:block;
-            width:220px;
-            margin:30px auto;
-            text-align:center;
-            padding:12px;
-            background:#007bff;
-            color:white;
-            text-decoration:none;
-            border-radius:5px;
-        }
+    .btn:hover{
+        background:#0056b3;
+    }
 
-        .btn:hover{
-            background:#0056b3;
-        }
+    .logo-pass{
+        color:green;
+        font-weight:bold;
+    }
 
-    </style>
-</head>
-<body>
+    .logo-fail{
+        color:red;
+        font-weight:bold;
+    }
 
-<h1>Label QC Detailed Results</h1>
+    .logo-box{
+        background:#f8f9fa;
+        border:1px solid #ddd;
+        border-radius:5px;
+        padding:15px;
+        margin-top:15px;
+    }
 
-{% for item in results %}
+</style>
 
-<div class="sample-card">
+</head><body><h1>🏷️ Label QC Detailed Results</h1>{% for item in results %}
 
-    <h2 class="sample-title">
-        Sample File: {{ item.filename }}
-    </h2>
+<div class="sample-card"><h2 class="sample-title">
+    Sample File: {{ item.filename }}
+</h2>
 
-    <p>
-        <strong>Verdict:</strong>
+<p>
 
-        {% if item.result.verdict == "APPROVED" %}
-            <span class="approved">
-                {{ item.result.verdict }}
-            </span>
+    <strong>Final QC Result:</strong>
 
-        {% elif item.result.verdict == "PARTIALLY APPROVED" %}
-            <span class="partial">
-                {{ item.result.verdict }}
-            </span>
+    {% if item.result.verdict == "APPROVED"
+          and item.result.logo_status == "PASS" %}
 
-        {% else %}
-            <span class="rejected">
-                {{ item.result.verdict }}
-            </span>
-        {% endif %}
-    </p>
+        <span class="approved">
+            ✅ APPROVED
+        </span>
 
-    <div class="stats">
+    {% elif item.result.verdict == "PARTIALLY APPROVED" %}
 
-        <div class="stat-box">
-            Probability:
-            <strong>
-                {{ item.result.probability }}%
-            </strong>
-        </div>
+        <span class="partial">
+            ⚠ PARTIALLY APPROVED
+        </span>
 
-        <div class="stat-box">
-            Total Fields:
-            <strong>
-                {{ item.result.total_fields }}
-            </strong>
-        </div>
+    {% else %}
 
-        <div class="stat-box">
-            Matched:
-            <strong>
-                {{ item.result.matched_count }}
-            </strong>
-        </div>
+        <span class="rejected">
+            ❌ NOT APPROVED
+        </span>
 
-        <div class="stat-box">
-            Missing:
-            <strong>
-                {{ item.result.missing_count }}
-            </strong>
-        </div>
+    {% endif %}
 
-        <div class="stat-box">
-            Extra:
-            <strong>
-                {{ item.result.extra_count }}
-            </strong>
-        </div>
+</p>
 
+<div class="stats">
+
+    <div class="stat-box">
+        Probability:
+        <strong>{{ item.result.probability }}%</strong>
     </div>
 
-    <h3>Matched Fields</h3>
+    <div class="stat-box">
+        Total Fields:
+        <strong>{{ item.result.total_fields }}</strong>
+    </div>
 
-    <ul>
+    <div class="stat-box">
+        Matched:
+        <strong>{{ item.result.matched_count }}</strong>
+    </div>
 
-        {% if item.result.matched_fields %}
+    <div class="stat-box">
+        Missing:
+        <strong>{{ item.result.missing_count }}</strong>
+    </div>
 
-            {% for field in item.result.matched_fields %}
-
-                <li class="matched">
-                    ✓ {{ field }}
-                </li>
-
-            {% endfor %}
-
-        {% else %}
-
-            <li>No matched fields found</li>
-
-        {% endif %}
-
-    </ul>
-
-    <h3>Missing Fields</h3>
-
-    <ul>
-
-        {% if item.result.missing_fields %}
-
-            {% for field in item.result.missing_fields %}
-
-                <li class="missing">
-                    ✗ {{ field }}
-                </li>
-
-            {% endfor %}
-
-        {% else %}
-
-            <li>No missing fields</li>
-
-        {% endif %}
-
-    </ul>
-
-    <h3>Extra Fields</h3>
-
-    <ul>
-
-        {% if item.result.extra_fields %}
-
-            {% for field in item.result.extra_fields %}
-
-                <li class="extra">
-                    ⚠ {{ field }}
-                </li>
-
-            {% endfor %}
-
-        {% else %}
-
-            <li>No extra fields</li>
-
-        {% endif %}
-
-    </ul>
-
-    <h3>Approval vs Sample Comparison</h3>
-
-    <table>
-
-        <tr>
-            <th>Approval Label</th>
-            <th>Sample Label</th>
-        </tr>
-
-        {% for row in item.result.comparison_rows %}
-
-        <tr>
-
-            <td>
-                {{ row.approval }}
-            </td>
-
-            <td>
-                {{ row.sample }}
-            </td>
-
-        </tr>
-
-        {% endfor %}
-
-    </table>
-
-    <h3>Approval OCR Text</h3>
-
-    <pre>{{ item.result.approval_text }}</pre>
-
-    <h3>Sample OCR Text</h3>
-
-    <pre>{{ item.result.sample_text }}</pre>
+    <div class="stat-box">
+        Extra:
+        <strong>{{ item.result.extra_count }}</strong>
+    </div>
 
 </div>
 
-{% endfor %}
+<div class="logo-box">
+
+    <h3>🖼 Logo Verification</h3>
+
+    <p>
+        <strong>Logo Similarity:</strong>
+        {{ item.result.logo_similarity }}%
+    </p>
+
+    <p>
+
+        <strong>Status:</strong>
+
+        {% if item.result.logo_status == "PASS" %}
+
+            <span class="logo-pass">
+                ✅ PASS
+            </span>
+
+        {% else %}
+
+            <span class="logo-fail">
+                ❌ FAIL
+            </span>
+
+        {% endif %}
+
+    </p>
+
+</div>
+
+<h3>✅ Matched Fields</h3>
+
+<ul>
+
+    {% if item.result.matched_fields %}
+
+        {% for field in item.result.matched_fields %}
+
+            <li class="matched">
+                ✓ {{ field }}
+            </li>
+
+        {% endfor %}
+
+    {% else %}
+
+        <li>No matched fields found</li>
+
+    {% endif %}
+
+</ul>
+
+<h3>❌ Missing Fields</h3>
+
+<ul>
+
+    {% if item.result.missing_fields %}
+
+        {% for field in item.result.missing_fields %}
+
+            <li class="missing">
+                ✗ {{ field }}
+            </li>
+
+        {% endfor %}
+
+    {% else %}
+
+        <li>No missing fields</li>
+
+    {% endif %}
+
+</ul>
+
+<h3>⚠ Extra Fields</h3>
+
+<ul>
+
+    {% if item.result.extra_fields %}
+
+        {% for field in item.result.extra_fields %}
+
+            <li class="extra">
+                ⚠ {{ field }}
+            </li>
+
+        {% endfor %}
+
+    {% else %}
+
+        <li>No extra fields</li>
+
+    {% endif %}
+
+</ul>
+
+<h3>📊 Approval vs Sample Comparison</h3>
+
+<table>
+
+    <tr>
+        <th>Approval Label</th>
+        <th>Sample Label</th>
+    </tr>
+
+    {% for row in item.result.comparison_rows %}
+
+    <tr>
+
+        <td>{{ row.approval }}</td>
+
+        <td>{{ row.sample }}</td>
+
+    </tr>
+
+    {% endfor %}
+
+</table>
+
+<h3>📋 Approval OCR Text</h3>
+
+<pre>{{ item.result.approval_text }}</pre>
+
+<h3>📄 Sample OCR Text</h3>
+
+<pre>{{ item.result.sample_text }}</pre>
+
+</div>{% endfor %}
 
 <a href="/" class="btn">
     Compare More Labels
-</a>
-
-</body>
+</a></body>
 </html>

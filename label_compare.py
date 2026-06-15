@@ -39,6 +39,85 @@ def extract_text(image_path):
     return text.strip()
 
 
+# --------------------------------------------------
+# LOGO COMPARISON
+# --------------------------------------------------
+
+def compare_logo(
+    approval_path,
+    sample_path
+):
+
+    try:
+
+        approval_img = cv2.imread(
+            approval_path
+        )
+
+        sample_img = cv2.imread(
+            sample_path
+        )
+
+        if approval_img is None or sample_img is None:
+
+            return 0, "FAIL"
+
+        approval_gray = cv2.cvtColor(
+            approval_img,
+            cv2.COLOR_BGR2GRAY
+        )
+
+        sample_gray = cv2.cvtColor(
+            sample_img,
+            cv2.COLOR_BGR2GRAY
+        )
+
+        sample_gray = cv2.resize(
+
+            sample_gray,
+
+            (
+                approval_gray.shape[1],
+                approval_gray.shape[0]
+            )
+
+        )
+
+        result = cv2.matchTemplate(
+
+            sample_gray,
+            approval_gray,
+            cv2.TM_CCOEFF_NORMED
+
+        )
+
+        _, max_val, _, _ = cv2.minMaxLoc(
+            result
+        )
+
+        logo_similarity = round(
+            max_val * 100,
+            2
+        )
+
+        logo_status = (
+            "PASS"
+            if logo_similarity >= 90
+            else "FAIL"
+        )
+
+        return logo_similarity, logo_status
+
+    except Exception as e:
+
+        print(
+            "Logo Compare Error:",
+            str(e)
+        )
+
+        return 0, "FAIL"
+
+
 def compare_labels(
     approval_path,
     sample_path
@@ -204,6 +283,17 @@ def compare_labels(
 
         verdict = "NOT APPROVED"
 
+    # -----------------------------
+    # LOGO CHECK
+    # -----------------------------
+
+    logo_similarity, logo_status = compare_logo(
+
+        approval_path,
+        sample_path
+
+    )
+
     return {
 
         "verdict":
@@ -240,6 +330,14 @@ def compare_labels(
             approval_text,
 
         "sample_text":
-            sample_text
+            sample_text,
+
+        # NEW LOGO RESULTS
+
+        "logo_similarity":
+            logo_similarity,
+
+        "logo_status":
+            logo_status
 
     }
