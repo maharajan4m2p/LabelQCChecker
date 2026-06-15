@@ -17,7 +17,10 @@ from label_compare import (
     compare_labels
 )
 
-app = Flask(__name__)
+app = Flask(
+    __name__,
+    template_folder="templates"
+)
 
 BASE_DIR = os.path.dirname(
     os.path.abspath(__file__)
