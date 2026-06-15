@@ -21,6 +21,16 @@ app = Flask(
     __name__,
     template_folder="templates"
 )
+@app.route("/debug")
+def debug():
+    import os
+
+    return {
+        "cwd": os.getcwd(),
+        "files": os.listdir("."),
+        "templates_exists": os.path.exists("templates"),
+        "templates_files": os.listdir("templates") if os.path.exists("templates") else []
+    }
 
 BASE_DIR = os.path.dirname(
     os.path.abspath(__file__)
